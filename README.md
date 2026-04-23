@@ -75,6 +75,11 @@ The dataset contains **614 loan applications** with features such as income, cre
 
 ## How to Run
 
-1. **Clone the repository:**
-```bash
-git clone <repository_url>
+1. Clone the repository:
+git clone https://github.com/ahartshorn416/home_loan_approval_prediction
+
+2. Install dependencies:
+pip install -r requirements.txt
+
+3. Open the notebook:
+jupyter notebook scripts/loan_approval_prediction.ipynb
