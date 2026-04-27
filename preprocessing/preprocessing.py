@@ -12,8 +12,7 @@ Tailored to the actual column types in year_2023_loan_purposes_1.csv:
 - debt_to_income_ratio: MIXED — integers AND bracket strings AND NaN
 - applicant_age: string brackets("<25", "25-34", etc.)
 
-SMOTE is applied AFTER the train / test split. Saves train / test splits + scaler + feature names
-to data processed.
+Saves train / test splits + scaler + feature names to data processed.
 """
 # ------------
 # Imports
@@ -388,10 +387,10 @@ df = coerce_all_numeric(df)
 df = fill_missing(df)
 print(f"       Shape after preprocessing: {df.shape}")
 
-# ------------------------
-# 8. Split + scale + SMOTE
-# ------------------------
-print("\n[8/8] Train/test split → scale → SMOTE (train only)...")
+# ------------------
+# 8. Split + scale
+# -------------------
+print("\n[8/8] Train/test split → scale (train only)...")
 X = df.drop(columns=["label"])
 y = df["label"]
 
@@ -401,7 +400,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
 )
 print(f"\n       Train: {X_train.shape}  |  Test: {X_test.shape}")
-print(f"       Train class dist (before SMOTE):")
+print(f"       Train class dist:")
 vc = y_train.value_counts().sort_index()
 for k, v in vc.items():
     print(f"         {k} ({'Approved' if k==1 else 'Denied  '}): {v:,} ({v/len(y_train)*100:.1f}%)")
@@ -411,24 +410,6 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled  = scaler.transform(X_test)
 
-# Check class imbalance — only apply SMOTE if ratio > 2:1
-majority = vc.max()
-minority = vc.min()
-ratio    = majority / minority
-print(f"\n       Class ratio (majority/minority): {ratio:.2f}:1")
-
-if ratio > 2.0:
-    print("       Applying SMOTE (ratio > 2:1)...")
-    smote = SMOTE(random_state=RANDOM_STATE, n_jobs=-1)
-    X_train_final, y_train_final = smote.fit_resample(X_train_scaled, y_train)
-    print(f"       After SMOTE — class dist:")
-    vc2 = pd.Series(y_train_final).value_counts().sort_index()
-    for k, v in vc2.items():
-        print(f"         {k} ({'Approved' if k==1 else 'Denied  '}): {v:,}")
-else:
-    print("       Skipping SMOTE (ratio <= 2:1, imbalance is manageable).")
-    X_train_final = X_train_scaled
-    y_train_final = y_train
 
 # ------
 # Save
@@ -436,8 +417,8 @@ else:
 print("\n[INFO] Saving processed data...")
 feature_names = X.columns.tolist()
 
-joblib.dump(X_train_final,  PROC_DIR / "X_train.pkl")
-joblib.dump(y_train_final,  PROC_DIR / "y_train.pkl")
+joblib.dump(X_train_scaled,  PROC_DIR / "X_train.pkl")
+joblib.dump(y_train,  PROC_DIR / "y_train.pkl")
 joblib.dump(X_test_scaled,  PROC_DIR / "X_test.pkl")
 joblib.dump(y_test,         PROC_DIR / "y_test.pkl")
 joblib.dump(scaler,         PROC_DIR / "scaler.pkl")

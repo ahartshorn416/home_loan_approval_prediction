@@ -1,1 +1,7 @@
 data/raw_data/year_2023_loan_purposes_1.csv
+data/processed_data/y_train.pkl
+data/processed_data/X_train.pkl
+data/processed_data/X_test.pkl
+data/processed_data/y_test.pkl
+data/processed_data/scaler.pkl
+data/processed_data/feature_names.pkl
