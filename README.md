@@ -1,85 +1,131 @@
-# Home Loan Approval Prediction
+# HMDA 2023 — Home Loan Approval Prediction
 
-## Project Overview
-This project aims to **predict home loan approval** for applicants based on their personal, financial, and demographic details. The model is designed to assist financial institutions in **automating loan eligibility assessment** and identifying high-risk applicants.
-
-The dataset contains **614 loan applications** with features such as income, credit history, education, and property area.
+Predicts home loan approval/denial using **real** U.S. mortgage application data from the
+Home Mortgage Disclosure Act (HMDA), published annually by the CFPB.
 
 ---
 
-## Dataset
-**Source:** Provided by the finance company.  
+## Why HMDA?
 
-**Columns:**
-
-| Column Name           | Description |
-|----------------------|-------------|
-| Loan_ID               | Unique loan identifier |
-| Gender                | Applicant's gender (Male/Female) |
-| Married               | Marital status (Yes/No) |
-| Dependents            | Number of dependents (0,1,2,3+) |
-| Education             | Education level (Graduate/Not Graduate) |
-| Self_Employed         | Self-employment status (Yes/No) |
-| ApplicantIncome       | Applicant's monthly income |
-| CoapplicantIncome     | Coapplicant's monthly income |
-| LoanAmount            | Loan amount requested |
-| Loan_Amount_Term      | Loan term in months |
-| Credit_History        | Credit history (1 = good, 0 = bad) |
-| Property_Area         | Urban, Semiurban, Rural |
-| Loan_Status           | Loan approval status (Y/N) |
+Unlike synthetic or anonymized datasets, HMDA data is:
+- **Legally mandated** — lenders must report every application
+- **Millions of rows** — 2023 dataset covers ~10M+ applications nationwide
+- **Rich features** — income, DTI, LTV, race, sex, loan type, geography
+- **Real outcomes** — actual approval/denial decisions
 
 ---
 
-## Project Workflow
+## Project Structure
 
-### 1. Exploratory Data Analysis (EDA)
-- **Target Distribution:** Imbalance observed; more approved loans than rejected ones.
-- **Categorical Analysis:** Credit history, education, marital status, and property area were analyzed against loan approval.
-- **Numerical Analysis:** Applicant income, coapplicant income, and loan amount distributions analyzed. Skewed features log-transformed.
+```
+hmda_loan_prediction/
+├── data/
+│   ├── raw/                    # Downloaded HMDA CSV
+│   └── processed/              # Train/test splits (pkl)
+├── models/                     # Trained model files (pkl)
+├── outputs/
+│   ├── eda/                    # EDA plots
+│   └── evaluation/             # Evaluation plots + comparison CSV
+├── scripts/
+│   ├── 01_download_data.py     # Fetch data from CFPB API
+│   ├── 02_eda.py               # Exploratory data analysis
+│   ├── 03_preprocessing.py     # Clean, encode, split, SMOTE
+│   ├── 04_train.py             # Train 3 models with K-fold CV
+│   └── 05_evaluate.py          # Evaluate on test set, plots
+├── requirements.txt
+└── README.md
+```
 
-### 2. Data Preprocessing
-- Missing values filled using **mode** (categorical) and **median** (numerical).  
-- Categorical variables encoded into numeric format:
-  - Binary mapping (0/1) for gender, education, married, self-employed, loan status.
-  - One-hot encoding for property area.
-- Feature engineering:
-  - `TotalIncome = ApplicantIncome + CoapplicantIncome`
-  - `LoanAmount_log = log(LoanAmount)`
+---
 
-### 3. Handling Class Imbalance
-- The target variable is imbalanced (Approved > Not Approved).  
-- Used **SMOTE (Synthetic Minority Oversampling Technique)** to oversample the minority class (rejected loans).
+## Setup
 
-### 4. Modeling
-- **Algorithm:** Random Forest Classifier  
-- **Train-Test Split:** 80/20 stratified split  
-- **Feature Scaling:** StandardScaler for numerical features  
-- **Evaluation Metrics:** Precision, Recall, F1-score, Accuracy, ROC-AUC  
-
-### 5. Model Performance (With SMOTE)
-| Class | Precision | Recall | F1-Score | Support |
-|-------|-----------|--------|----------|---------|
-| Not Approved (0) | 0.69 | 0.66 | 0.68 | 38 |
-| Approved (1) | 0.85 | 0.87 | 0.86 | 85 |
-
-- **Accuracy:** 80%  
-- **Macro F1-score:** 0.77  
-- **Weighted F1-score:** 0.80  
-
-**Insights:**  
-- Model now predicts **rejected loans much better** (recall improved from ~0.42 → 0.66).  
-- Approved loans remain highly accurate.  
-- Key features driving approval: **Credit History, TotalIncome, LoanAmount, Property Area, Dependents**.
+```bash
+git clone https://github.com/your-username/hmda_loan_prediction
+cd hmda_loan_prediction
+pip install -r requirements.txt
+```
 
 ---
 
 ## How to Run
 
-1. Clone the repository:
-git clone https://github.com/ahartshorn416/home_loan_approval_prediction
+Run scripts in order from the project root:
 
-2. Install dependencies:
-pip install -r requirements.txt
+```bash
+python scripts/01_download_data.py    # ~5-15 min depending on connection
+python scripts/02_eda.py
+python scripts/03_preprocessing.py
+python scripts/04_train.py
+python scripts/05_evaluate.py
+```
 
-3. Open the notebook:
-jupyter notebook scripts/loan_approval_prediction.ipynb
+---
+
+## Target Variable
+
+HMDA's `action_taken` field is binarized:
+
+| action_taken | Meaning                  | Label    |
+|--------------|--------------------------|----------|
+| 1            | Loan originated          | Approved |
+| 2            | Approved, not accepted   | Approved |
+| 3            | Denied                   | Denied   |
+
+Withdrawn (4), incomplete (5), and purchased (6) applications are excluded.
+
+---
+
+## Models
+
+| Model               | Role                          |
+|---------------------|-------------------------------|
+| Logistic Regression | Interpretable baseline        |
+| Random Forest       | Non-linear ensemble           |
+| XGBoost             | Gradient boosting (often best)|
+
+All models are compared using **5-fold stratified cross-validation** on the training set.
+The best model (by ROC-AUC) is flagged for final evaluation on the held-out test set.
+
+---
+
+## Key Improvements Over Baseline
+
+| Dimension          | Old (Kaggle)           | New (HMDA)                        |
+|--------------------|------------------------|-----------------------------------|
+| Data size          | 614 rows               | Millions of real applications     |
+| Data source        | Synthetic/unknown      | Legally mandated real data        |
+| Models             | Random Forest only     | LR + RF + XGBoost                 |
+| Validation         | Single 80/20 split     | Stratified 5-fold CV              |
+| SMOTE placement    | Potentially before split| Correctly applied after split    |
+| Evaluation         | Accuracy + F1 only     | ROC-AUC, PR curves, threshold tuning |
+| Feature count      | 12                     | 30+                               |
+
+---
+
+## Feature Engineering
+
+- `income_to_loan_ratio` — applicant income relative to loan amount
+- `loan_amount_log`, `applicant_income_log` — log transforms for skewed distributions
+- DTI and LTV brackets converted to numeric midpoints
+- Categorical variables one-hot encoded (loan type, property type, race, sex, etc.)
+
+---
+
+## Outputs
+
+After running all scripts:
+
+- `outputs/eda/` — 7 EDA plots (target distribution, loan amount, income, DTI, etc.)
+- `outputs/evaluation/` — confusion matrices, ROC curves, PR curves, feature importance, threshold tuning
+- `outputs/evaluation/model_comparison.csv` — final test set metrics for all models
+- `models/optimal_threshold.pkl` — optimal decision threshold for the best model
+
+---
+
+## Data Source
+
+**HMDA Data Browser** — Consumer Financial Protection Bureau  
+https://ffiec.cfpb.gov/data-browser/
+
+The dataset is public domain. No registration required.
