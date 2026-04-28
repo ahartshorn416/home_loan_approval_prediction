@@ -96,6 +96,7 @@ The dataset is public domain. No registration required to download.
 
 ```
 home_loan_approval_prediction/
+├── analysis/                   # Analysis Report
 ├── data/
 │   ├── raw/                    # Raw HMDA CSV (not in git — too large)
 │   └── processed/              # Train/test pkl files (not in git)
