@@ -5,6 +5,18 @@ Home Mortgage Disclosure Act (HMDA), published annually by the CFPB.
 
 ---
 
+## Research Question
+
+> *Can machine learning predict home loan approval decisions using applicant financial and demographic data reported under HMDA?*
+
+---
+
+## Target Audience
+
+**Fair lending compliance teams** — regulators and internal compliance officers checking whether loan denials correlate with protected characteristics like race, sex, or ethnicity.
+
+---
+
 ## Results
 
 **Best model: XGBoost — ROC-AUC 0.9932 on 850,853 held-out applications**
@@ -40,7 +52,7 @@ Home Mortgage Disclosure Act (HMDA), published annually by the CFPB.
 
 ### Key Findings
 
-- **Interest rate dominates** at 0.60 importance — lenders price risk into the rate, so it encodes most of the creditworthiness signal.
+- **Interest rate dominates** at 0.60 importance — lenders price risk into the rate, so it encodes most of the creditworthiness signal. This also raises a fair lending question: if rates already encode bias from lender pricing decisions, the model may be learning a proxy for discrimination rather than pure credit risk.
 - **DTI is the second strongest financial feature** at 0.076, consistent with standard underwriting practice.
 - **Automated underwriting system matters** — applications processed outside standard AUS systems (Desktop Underwriter / Loan Prospector) behave very differently from those processed through them.
 - **Logistic Regression is insufficient** — precision of only 0.39 on denied loans confirms the approval decision is a non-linear problem that tree-based models handle far better.
@@ -83,7 +95,7 @@ The dataset is public domain. No registration required to download.
 ## Project Structure
 
 ```
-hmda_loan_prediction/
+home_loan_approval_prediction/
 ├── data/
 │   ├── raw/                    # Raw HMDA CSV (not in git — too large)
 │   └── processed/              # Train/test pkl files (not in git)
@@ -92,10 +104,11 @@ hmda_loan_prediction/
 │   ├── eda/                    # 13 EDA plots
 │   └── evaluation/             # Evaluation plots + model_comparison.csv
 ├── scripts/
-│   ├── eda.py               # 13-plot exploratory data analysis
-│   ├── preprocessing.py     # Clean, encode, engineer, split
-│   ├── train.py             # Train 3 models with 5-fold CV
-│   └── evaluate.py          # Evaluate on test set, generate plots
+│   ├── 01_download_data.py     # Download data from CFPB
+│   ├── 02_eda.py               # 13-plot exploratory data analysis
+│   ├── 03_preprocessing.py     # Clean, encode, engineer, split
+│   ├── 04_train.py             # Train 3 models with 5-fold CV
+│   └── 05_evaluate.py          # Evaluate on test set, generate plots
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -127,10 +140,10 @@ pip install -r requirements.txt
 Run scripts in order from the project root:
 
 ```bash
-python scripts/02_eda.py               # Generate 13 EDA plots
-python scripts/03_preprocessing.py     # Clean + engineer + split (~10 min)
-python scripts/04_train.py             # Train all models with CV (~30-60 min)
-python scripts/05_evaluate.py          # Evaluate + generate all plots
+python scripts/eda.py               # Generate 13 EDA plots
+python scripts/preprocessing.py     # Clean + engineer + split (~10 min)
+python scripts/train.py             # Train all models with CV (~30-60 min)
+python scripts/evaluate.py          # Evaluate + generate all plots
 ```
 
 > `01_download_data.py` is included but the manual download above is more reliable for the full nationwide file.
@@ -182,13 +195,13 @@ Model selection uses **5-fold stratified cross-validation** on the training set,
 
 | File | Description |
 |---|---|
-| `outputs/eda/01–13_*.png` | EDA plots (target, income, DTI, race, LTV, states, etc.) |
-| `outputs/evaluation/01_confusion_matrices.png` | Side-by-side confusion matrices for all 3 models |
-| `outputs/evaluation/02_roc_curves.png` | Overlaid ROC curves |
-| `outputs/evaluation/03_pr_curves.png` | Precision-recall curves |
-| `outputs/evaluation/04_feature_importance_*.png` | Top 20 features for RF and XGBoost |
-| `outputs/evaluation/05_threshold_tuning.png` | Precision/recall/F1 vs decision threshold |
-| `outputs/evaluation/model_comparison.csv` | Full test set metrics for all models |
+| `results/eda/01–13_*.png` | EDA plots (target, income, DTI, race, LTV, states, etc.) |
+| `results/evaluation/01_confusion_matrices.png` | Side-by-side confusion matrices for all 3 models |
+| `results/evaluation/02_roc_curves.png` | Overlaid ROC curves |
+| `results/evaluation/03_pr_curves.png` | Precision-recall curves |
+| `results/evaluation/04_feature_importance_*.png` | Top 20 features for RF and XGBoost |
+| `results/evaluation/05_threshold_tuning.png` | Precision/recall/F1 vs decision threshold |
+| `results/evaluation/model_comparison.csv` | Full test set metrics for all models |
 
 ---
 
@@ -204,3 +217,11 @@ Model selection uses **5-fold stratified cross-validation** on the training set,
 | Evaluation | Accuracy + F1 only | ROC-AUC, PR curves, threshold tuning, feature importance |
 | Features | 12 | 121 (after encoding + engineering) |
 | Best ROC-AUC | ~0.80 | **0.9932** |
+
+---
+
+## Limitations & Future Work
+
+- **Interest rate as a feature** may encode lender bias rather than pure credit risk. A future version could exclude it and measure the performance drop to isolate its contribution.
+- **Fair lending analysis** — a natural next step is comparing approval rates by `derived_race` after controlling for DTI and income, which is exactly the analysis CFPB regulators perform.
+- **Geographic variation** — state-level approval rate differences visible in EDA warrant deeper analysis, particularly in states with historically restrictive lending patterns.
